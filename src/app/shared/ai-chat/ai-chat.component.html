@@ -1,0 +1,64 @@
+<!-- AI Chat Widget -->
+<div class="ai-widget" [class.expanded]="isExpanded()">
+  <!-- Toggle Button -->
+  <button class="ai-toggle" (click)="toggleExpanded()" title="Chat con IA">
+    <span class="ai-icon">🤖</span>
+    @if (!isExpanded()) {
+      <span class="ai-label">Preguntar a la IA</span>
+    }
+  </button>
+  
+  <!-- Chat Panel -->
+  @if (isExpanded()) {
+    <div class="ai-panel">
+      <div class="ai-header">
+        <span class="ai-title">Tutor IA</span>
+        <button class="ai-close" (click)="toggleExpanded()">×</button>
+      </div>
+      
+      <!-- Messages -->
+      <div class="ai-messages">
+        @if (ai.messages().length === 0) {
+          <div class="ai-welcome">
+            <p>Hola! Soy tu tutor de estructuras discretas.</p>
+            <p>Puedo explicarte:</p>
+            <ul>
+              <li>Tablas de verdad y conectores logicos</li>
+              <li>Operaciones con conjuntos</li>
+              <li>Algoritmos BFS y DFS</li>
+            </ul>
+            <p>Preguntame algo!</p>
+          </div>
+        }
+        
+        @for (msg of ai.messages(); track msg.id) {
+          <div class="ai-message" [class.user]="msg.role === 'user'" [class.assistant]="msg.role === 'assistant'">
+            <div class="msg-content">{{ msg.content }}</div>
+            <div class="msg-time">{{ formatTime(msg.timestamp) }}</div>
+          </div>
+        }
+        
+        @if (ai.isLoading()) {
+          <div class="ai-message assistant">
+            <div class="msg-content typing">Escribiendo...</div>
+          </div>
+        }
+      </div>
+      
+      <!-- Input -->
+      <div class="ai-input-row">
+        <input 
+          type="text" 
+          class="ai-input"
+          placeholder="Escribe tu pregunta..."
+          [value]="inputMessage()"
+          (input)="inputMessage.set($any($event.target).value)"
+          (keydown)="handleKeydown($event)"
+        />
+        <button class="ai-send" (click)="sendMessage()" [disabled]="ai.isLoading()">
+          ➤
+        </button>
+      </div>
+    </div>
+  }
+</div>

@@ -1,0 +1,175 @@
+<!-- Main Content -->
+<main class="main-content">
+  <div class="container">
+    <header class="module-header">
+      <h1 class="module-title"><span class="title-icon">U</span> Teoria de Conjuntos</h1>
+      <p class="module-desc">Opera con conjuntos y visualiza diagramas de Venn</p>
+    </header>
+    
+    <div class="main-grid">
+      <!-- Panel izquierdo: Conjuntos -->
+      <section class="sets-panel">
+        <div class="panel-header">
+          <h2 class="panel-title">Conjuntos</h2>
+          <button class="btn-add" (click)="showModal.set(true)">+ Nuevo</button>
+        </div>
+        
+        @if (sets().length === 0) {
+          <div class="empty-sets">
+            <p>No hay conjuntos</p>
+            <div class="quick-examples">
+              <p class="examples-label">Crear rapido:</p>
+              <button class="example-btn" (click)="quickA()">A = 1, 2, 3</button>
+              <button class="example-btn" (click)="quickB()">B = 3, 4, 5</button>
+            </div>
+          </div>
+        }
+        
+        <div class="sets-list">
+          @for (s of sets(); track s.id) {
+            <div class="set-item" [class.selected-a]="selectedA() === s.id" [class.selected-b]="selectedB() === s.id">
+              <div class="set-info">
+                <span class="set-name">{{ s.name }} =</span>
+                <span class="set-elements">{{ formatSet(s) }}</span>
+                <span class="set-cardinality">({{ s.elements.length }})</span>
+              </div>
+              <div class="set-actions">
+                <button class="select-btn" [class.active]="selectedA() === s.id" (click)="selectA(s.id)">A</button>
+                <button class="select-btn" [class.active]="selectedB() === s.id" (click)="selectB(s.id)">B</button>
+                <button class="delete-btn" (click)="deleteSet(s.id)">x</button>
+              </div>
+            </div>
+          }
+        </div>
+        
+        @if (sets().length > 0) {
+          <button class="btn-clear" (click)="clearAll()">Limpiar todo</button>
+        }
+      </section>
+      
+      <!-- Panel central: Operaciones -->
+      <section class="operations-panel">
+        <h2 class="panel-title">Operacion</h2>
+        
+        <div class="op-info">
+          <span class="op-a">{{ setA()?.name || '-' }}</span>
+          <span class="op-sym">{{ getSym() }}</span>
+          @if (selectedOp() !== 'complement') {
+            <span class="op-b">{{ setB()?.name || '-' }}</span>
+          }
+        </div>
+        
+        <div class="ops-grid">
+          @for (op of operations; track op.type) {
+            <button class="op-btn" [class.active]="selectedOp() === op.type" (click)="selectOp(op.type)">
+              <span class="op-symbol-btn">{{ op.symbol }}</span>
+              <span class="op-label">{{ op.label }}</span>
+            </button>
+          }
+        </div>
+        
+        @if (selectedOp() === 'complement') {
+          <div class="universal-input">
+            <label>Conjunto Universal:</label>
+            <input type="text" placeholder="Ej: 1, 2, 3, 4, 5" [value]="complementU()" (input)="complementU.set($any($event.target).value)"/>
+          </div>
+        }
+        
+        @if (result()) {
+          <div class="result-card">
+            <h3 class="result-title">Resultado</h3>
+            <div class="result-expr">{{ result()?.name }}</div>
+            <div class="result-elements">{{ formatRes() }}</div>
+            <div class="result-cardinality">|Resultado| = {{ result()?.cardinality }}</div>
+          </div>
+        }
+        
+        @if (errorMsg()) {
+          <div class="error-message">{{ errorMsg() }}</div>
+        }
+      </section>
+      
+      <!-- Panel derecho: Venn -->
+      <section class="venn-panel">
+        <h2 class="panel-title">Diagrama de Venn</h2>
+        
+        @if (setA() && (setB() || selectedOp() === 'complement')) {
+          <div class="venn-diagram">
+            <svg viewBox="0 0 300 180" class="venn-svg">
+              @if (selectedOp() === 'complement') {
+                <rect x="10" y="10" width="280" height="160" fill="none" stroke="#666" stroke-width="2" stroke-dasharray="5,5"/>
+              }
+              <circle cx="115" cy="90" r="70" fill="rgba(234,88,12,0.2)" stroke="#ea580c" stroke-width="2"/>
+              <text x="75" y="55" class="venn-label" fill="#ea580c">A</text>
+              @if (selectedOp() !== 'complement') {
+                <circle cx="185" cy="90" r="70" fill="rgba(8,145,178,0.2)" stroke="#0891b2" stroke-width="2"/>
+                <text x="225" y="55" class="venn-label" fill="#0891b2">B</text>
+              }
+              @for (r of getShaded(); track r.label; let i = $index) {
+                @if (r.inA && r.inB && selectedOp() !== 'complement') {
+                  <text x="150" y="95" class="venn-element">{{ r.label }}</text>
+                } @else if (r.inA && !r.inB) {
+                  <text x="80" [attr.y]="70 + i * 22" class="venn-element">{{ r.label }}</text>
+                } @else if (!r.inA && r.inB) {
+                  <text x="220" [attr.y]="70 + i * 22" class="venn-element">{{ r.label }}</text>
+                } @else if (selectedOp() === 'complement') {
+                  <text x="50 + i * 35" y="160" class="venn-element">{{ r.label }}</text>
+                }
+              }
+            </svg>
+          </div>
+          
+          <div class="venn-legend">
+            @if (selectedOp() === 'complement') {
+              <div class="legend-item"><span class="legend-color complement"></span><span>Complemento</span></div>
+            } @else {
+              <div class="legend-item"><span class="legend-color a"></span><span>Solo A</span></div>
+              <div class="legend-item"><span class="legend-color b"></span><span>Solo B</span></div>
+              <div class="legend-item"><span class="legend-color both"></span><span>A n B</span></div>
+            }
+          </div>
+        } @else {
+          <div class="venn-empty">
+            <div class="venn-placeholder">U</div>
+            <p>Selecciona al menos un conjunto</p>
+          </div>
+        }
+      </section>
+    </div>
+  </div>
+</main>
+
+<!-- Modal -->
+@if (showModal()) {
+  <div class="modal-overlay" (click)="showModal.set(false)">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <h2 class="modal-title">Crear Conjunto</h2>
+      
+      <div class="modal-tabs">
+        <button class="tab-btn" [class.active]="activeTab() === 'ext'" (click)="activeTab.set('ext')">Extension</button>
+        <button class="tab-btn" [class.active]="activeTab() === 'range'" (click)="activeTab.set('range')">Rango</button>
+      </div>
+      
+      @if (activeTab() === 'ext') {
+        <div class="modal-content">
+          <label>Elementos (separados por coma):</label>
+          <input type="text" class="modal-input" placeholder="Ej: 1, 2, 3, 4" [value]="newInput()" (input)="newInput.set($any($event.target).value)"/>
+          <p class="input-hint">Numeros o letras</p>
+        </div>
+      } @else {
+        <div class="modal-content">
+          <label>Rango numerico:</label>
+          <div class="range-inputs">
+            <div class="range-field"><span>Min:</span><input type="number" [value]="compMin()" (input)="compMin.set(+$any($event.target).value)"/></div>
+            <div class="range-field"><span>Max:</span><input type="number" [value]="compMax()" (input)="compMax.set(+$any($event.target).value)"/></div>
+          </div>
+        </div>
+      }
+      
+      <div class="modal-actions">
+        <button class="btn-cancel" (click)="showModal.set(false)">Cancelar</button>
+        <button class="btn-create" (click)="activeTab() === 'ext' ? addSet() : addRange()">Crear</button>
+      </div>
+    </div>
+  </div>
+}

@@ -1,0 +1,173 @@
+/* Global styles */
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --color-primary: #7c3aed;
+  --color-sets: #ea580c;
+  --color-graphs: #0891b2;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: #f8fafc;
+  color: #1e293b;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Navbar */
+.navbar {
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.nav-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+}
+
+.brand-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  color: #1e293b;
+}
+
+.brand-icon {
+  font-size: 1.5rem;
+}
+
+.brand-text {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.nav-modules {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  text-decoration: none;
+  color: #64748b;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  background: transparent;
+}
+
+.nav-item:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+/* Colores por módulo - específicos PRIMERO (mayor prioridad) */
+.nav-item.nav-logic.router-link-active,
+.nav-item.nav-logic.active {
+  background: #7c3aed !important;
+  color: #ffffff;
+}
+
+.nav-item.nav-sets.router-link-active,
+.nav-item.nav-sets.active {
+  background: #ea580c !important;
+  color: #ffffff;
+}
+
+.nav-item.nav-graphs.router-link-active,
+.nav-item.nav-graphs.active {
+  background: #0891b2 !important;
+  color: #ffffff;
+}
+
+/* Default activo ( fallback) */
+.nav-item.router-link-active,
+.nav-item.active {
+  background: #7c3aed;
+  color: #ffffff;
+}
+
+.nav-icon {
+  font-size: 1rem;
+}
+
+/* Main content */
+.main-content {
+  min-height: calc(100vh - 140px);
+  padding: 1.5rem;
+}
+
+.main-content .container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Module headers */
+.module-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.module-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 0.5rem;
+}
+
+.title-icon {
+  color: #7c3aed;
+}
+
+.module-desc {
+  color: #64748b;
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 1.5rem;
+  background: #ffffff;
+  border-top: 1px solid #e2e8f0;
+}
+
+.footer p {
+  color: #94a3b8;
+  font-size: 0.875rem;
+  margin: 0;
+}

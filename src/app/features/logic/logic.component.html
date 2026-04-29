@@ -1,0 +1,207 @@
+<!-- Contenido principal -->
+<main class="main-content">
+  <div class="container">
+    
+    <!-- Título del módulo -->
+    <header class="module-header">
+      <h1 class="module-title">
+        <span class="title-icon">∧</span>
+        Lógica Proposicional
+      </h1>
+      <p class="module-desc">Genera tablas de verdad y aprende conectores lógicos</p>
+    </header>
+    
+    <!-- Panel de entrada -->
+    <section class="input-panel">
+      <div class="input-group">
+        <label class="input-label">Expresión Lógica</label>
+        
+        <div class="input-wrapper">
+          <input 
+            type="text" 
+            class="expression-input"
+            [class.error]="error()"
+            placeholder="Ej: p ∧ q → r"
+            [value]="expression()"
+            (input)="expression.set($any($event.target).value); validate()"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          
+          <!-- Botones de operadores -->
+          <div class="operators-bar">
+            @for (op of operators; track op.symbol) {
+              <button 
+                type="button" 
+                class="op-btn"
+                (click)="insertOperator(op.symbol)"
+                [title]="op.label"
+              >
+                {{ op.symbol }}
+              </button>
+            }
+            
+            <div class="op-separator"></div>
+            
+            <button 
+              type="button" 
+              class="action-btn clear-btn"
+              (click)="clear()"
+              title="Limpiar"
+            >
+              Limpiar
+            </button>
+            
+            <button 
+              type="button" 
+              class="action-btn calc-btn"
+              (click)="calculate()"
+              title="Calcular tabla"
+            >
+              Calcular
+            </button>
+          </div>
+        </div>
+        
+        <!-- Mensaje de error -->
+        @if (error()) {
+          <div class="error-message">
+            <span class="error-icon">⚠</span>
+            {{ error() }}
+          </div>
+        }
+        
+        <!-- Info de variables -->
+        @if (variables().length > 0) {
+          <div class="vars-info">
+            <span class="vars-label">Variables detectadas:</span>
+            @for (v of variables(); track v) {
+              <span class="var-badge">{{ v }}</span>
+            }
+            @if (tooManyVars()) {
+              <span class="vars-warning">
+                ⚠ Máximo 5 variables para mantener legibilidad
+              </span>
+            }
+          </div>
+        }
+      </div>
+    </section>
+    
+    <!-- Panel de resultados -->
+    @if (showTable() && table().length > 0 && !tooManyVars()) {
+      <section class="results-panel">
+        
+        <!-- Tabla de verdad -->
+        <div class="truth-table-section">
+          <h2 class="section-title">Tabla de Verdad</h2>
+          
+          <div class="table-wrapper">
+            <table class="truth-table">
+              <thead>
+                <tr>
+                  @for (v of variables(); track v) {
+                    <th class="var-header">{{ v }}</th>
+                  }
+                  <th class="expr-header">{{ expression() }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of table(); track $index) {
+                  <tr class="table-row">
+                    @for (v of variables(); track v) {
+                      <td class="value-cell" [class.true-val]="row.values[v]" [class.false-val]="!row.values[v]">
+                        {{ row.values[v] ? 'V' : 'F' }}
+                      </td>
+                    }
+                    <td class="result-cell" [class.true-result]="row.result" [class.false-result]="!row.result">
+                      {{ row.result ? 'V' : 'F' }}
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <!-- Clasificación -->
+        <div class="classification-section">
+          <h2 class="section-title">Clasificación</h2>
+          
+          <div class="classification-card" [class]="'type-' + classification()?.type?.toLowerCase()">
+            <div class="type-icon">
+              @switch (classification()?.type) {
+                @case ('Tautología') {
+                  ✓
+                }
+                @case ('Contradicción') {
+                  ✗
+                }
+                @default {
+                  ∼
+                }
+              }
+            </div>
+            <div class="type-info">
+              <h3 class="type-name">{{ classification()?.type }}</h3>
+              <p class="type-desc">{{ classification()?.desc }}</p>
+            </div>
+          </div>
+          
+          <div class="stats-grid">
+            <div class="stat-item">
+              <span class="stat-value">{{ table().length }}</span>
+              <span class="stat-label">Combinaciones</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value">{{ table().filter(r => r.result).length }}</span>
+              <span class="stat-label">Verdaderas</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value">{{ table().filter(r => !r.result).length }}</span>
+              <span class="stat-label">Falsas</span>
+            </div>
+          </div>
+        </div>
+        
+      </section>
+    }
+    
+    <!-- Estado vacío -->
+    @if (!expression() || variables().length === 0) {
+      <section class="empty-state">
+        <div class="empty-icon">📐</div>
+        <h2 class="empty-title">Ingresá una expresión lógica</h2>
+        <p class="empty-desc">
+          Usá los botones de arriba para construir tu expresión.<br>
+          Podés usar variables como <code>p</code>, <code>q</code>, <code>r</code>, etc.
+        </p>
+        
+        <div class="examples">
+          <h3 class="examples-title">Ejemplos:</h3>
+          <div class="example-list">
+            <button class="example-btn" (click)="setExample('p ∧ q')">p ∧ q</button>
+            <button class="example-btn" (click)="setExample('p ∨ q')">p ∨ q</button>
+            <button class="example-btn" (click)="setExample('p → q')">p → q</button>
+            <button class="example-btn" (click)="setExample('¬p')">¬p</button>
+            <button class="example-btn" (click)="setExample('(p ∧ q) → r')">(p ∧ q) → r</button>
+            <button class="example-btn" (click)="setExample('p ↔ q')">p ↔ q</button>
+          </div>
+        </div>
+      </section>
+    }
+    
+    <!-- Advertencia de muchas variables -->
+    @if (tooManyVars()) {
+      <section class="warning-state">
+        <div class="warning-icon">⚠</div>
+        <h2 class="warning-title">Demasiadas variables</h2>
+        <p class="warning-desc">
+          La expresión tiene {{ variables().length }} variables.<br>
+          Para mantener la tabla legible, se limita a 5 máximo.
+        </p>
+      </section>
+    }
+    
+  </div>
+</main>

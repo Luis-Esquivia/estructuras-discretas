@@ -1,0 +1,184 @@
+<!-- Main Content -->
+<main class="main-content">
+  <div class="container">
+    <header class="module-header">
+      <h1 class="module-title"><span class="title-icon">G</span> Grafos y Algoritmos</h1>
+      <p class="module-desc">Crea grafos y practica BFS/DFS</p>
+    </header>
+    
+    <div class="main-grid">
+      <!-- Canvas Panel -->
+      <section class="canvas-panel">
+        <div class="panel-header">
+          <h2 class="panel-title">Grafo</h2>
+          <div class="panel-actions">
+            <button class="action-btn" [class.active]="directed()" (click)="toggleDirected()">
+              {{ directed() ? 'Dirigido' : 'No Dirigido' }}
+            </button>
+            <button class="action-btn" [class.active]="edgeMode()" (click)="toggleEdgeMode()">
+              {{ edgeMode() ? 'Conectar' : 'Agregar Arista' }}
+            </button>
+          </div>
+        </div>
+        
+        <!-- SVG Canvas -->
+        <svg class="graph-canvas" [attr.viewBox]="'0 0 ' + svgWidth + ' ' + svgHeight" (click)="edgeMode() ? null : addNode()">
+          <!-- Edges -->
+          @for (edge of edges(); track edge.id) {
+            <path 
+              [attr.d]="getEdgePath(edge)"
+              class="graph-edge"
+              [class.traversed]="isEdgeTraversed(edge.source, edge.target)"
+            />
+            @if (directed()) {
+              <polygon 
+                [attr.points]="getArrowPoints(edge)"
+                class="graph-arrow"
+                [class.traversed]="isEdgeTraversed(edge.source, edge.target)"
+              />
+            }
+          }
+          
+          <!-- Nodes -->
+          @for (node of nodes(); track node.id) {
+            <g 
+              class="graph-node"
+              [class.current]="isNodeCurrent(node.id)"
+              [class.visited]="isNodeVisited(node.id)"
+              [class.selected]="selectedNode() === node.id"
+              [attr.transform]="'translate(' + node.x + ',' + node.y + ')'"
+              (click)="$event.stopPropagation(); selectNode(node.id)"
+            >
+              <circle r="22" class="node-circle" />
+              <text class="node-label">{{ node.label }}</text>
+            </g>
+          }
+        </svg>
+        
+        <!-- Add node input -->
+        <div class="add-node-row">
+          <input 
+            type="text" 
+            class="node-input" 
+            placeholder="Nombre del nodo" 
+            [value]="newNodeLabel()"
+            (input)="newNodeLabel.set($any($event.target).value)"
+            (keyup.enter)="addNode()"
+          />
+          <button class="btn-add" (click)="addNode()">+ Agregar Nodo</button>
+          <button class="btn-example" (click)="loadExample()">Ejemplo</button>
+        </div>
+        
+        @if (selectedNode()) {
+          <div class="node-info">
+            <span>Nodo seleccionado: {{ getNodeById(selectedNode()!)?.label }}</span>
+            <button class="btn-delete" (click)="deleteNode(selectedNode()!)">Eliminar</button>
+          </div>
+        }
+        
+        @if (edgeMode()) {
+          <div class="mode-info">
+            @if (edgeSource()) {
+              <span>Conectando desde {{ getNodeById(edgeSource()!)?.label }}...</span>
+              <button class="btn-cancel" (click)="edgeSource.set(null)">Cancelar</button>
+            } @else {
+              <span>Selecciona el nodo de origen</span>
+            }
+          </div>
+        }
+      </section>
+      
+      <!-- Algorithm Panel -->
+      <section class="algo-panel">
+        <h2 class="panel-title">Algoritmos</h2>
+        
+        <!-- Node selector -->
+        <div class="selector-row">
+          <label>Nodo inicio:</label>
+          <select class="start-select" [value]="startNode()" (change)="startNode.set($any($event.target).value)">
+            @for (node of nodes(); track node.id) {
+              <option [value]="node.id">{{ node.label }}</option>
+            }
+          </select>
+        </div>
+        
+        <!-- Algorithm buttons -->
+        <div class="algo-buttons">
+          <button 
+            class="algo-btn" 
+            [class.active]="selectedAlgorithm() === 'bfs'"
+            (click)="selectAlgorithm('bfs')"
+          >
+            BFS
+          </button>
+          <button 
+            class="algo-btn" 
+            [class.active]="selectedAlgorithm() === 'dfs'"
+            (click)="selectAlgorithm('dfs')"
+          >
+            DFS
+          </button>
+        </div>
+        
+        @if (selectedAlgorithm()) {
+          <button class="btn-run" (click)="runTraversal()">
+            Ejecutar
+          </button>
+        }
+        
+        <!-- Results -->
+        @if (traversalResult()) {
+          <div class="result-card">
+            <h3 class="result-title">
+              {{ traversalResult()?.type === 'bfs' ? 'BFS' : 'DFS' }}
+            </h3>
+            
+            <!-- Controls -->
+            <div class="step-controls">
+              <button [disabled]="currentStep() === 0" (click)="prevStep()">◀</button>
+              <span class="step-info">{{ currentStep() + 1 }} / {{ traversalResult()!.steps.length }}</span>
+              <button [disabled]="currentStep() >= traversalResult()!.steps.length - 1" (click)="nextStep()">▶</button>
+            </div>
+            
+            <!-- Visit order -->
+            <div class="order-display">
+              <span class="order-label">Orden de visita:</span>
+              <div class="order-list">
+                {{ getOrderString() }}
+              </div>
+            </div>
+            
+            <!-- Current state -->
+            @if (currentStepData()) {
+              <div class="state-display">
+                <div class="state-item">
+                  <span>Procesando:</span>
+                  <strong>{{ getNodeById(currentStepData()!.current)?.label }}</strong>
+                </div>
+                <div class="state-item">
+                  <span>{{ selectedAlgorithm() === 'bfs' ? 'Cola' : 'Pila' }}:</span>
+                  <code>{{ currentStepData()!.container.map(id => getNodeById(id)?.label).join(', ') || 'vacía' }}</code>
+                </div>
+              </div>
+            }
+            
+            <button class="btn-reset" (click)="resetTraversal()">Reiniciar</button>
+          </div>
+        }
+        
+        <!-- Adjacency List -->
+        @if (nodes().length > 0) {
+          <div class="adj-panel">
+            <h3 class="panel-subtitle">Lista de Adyacencia</h3>
+            <pre class="adj-list">{{ formatAdjList() }}</pre>
+          </div>
+        }
+        
+        <!-- Clear -->
+        @if (nodes().length > 0) {
+          <button class="btn-clear" (click)="clearAll()">Limpiar Todo</button>
+        }
+      </section>
+    </div>
+  </div>
+</main>
