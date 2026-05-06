@@ -11,57 +11,66 @@
       <p class="module-desc">Genera tablas de verdad y aprende conectores lógicos</p>
     </header>
     
-    <!-- Panel de entrada -->
-    <section class="input-panel">
-      <div class="input-group">
-        <label class="input-label">Expresión Lógica</label>
+<!-- Panel de entrada -->
+  <section class="input-panel">
+    <div class="input-group">
+      <label class="input-label">Expresión Lógica</label>
+      
+      <div class="input-wrapper">
+        <input 
+          type="text" 
+          class="expression-input"
+          [class.error]="error()"
+          placeholder="Ej: p ∧ q → r"
+          [value]="expression()"
+          (input)="expression.set($any($event.target).value); validate()"
+          autocomplete="off"
+          spellcheck="false"
+        />
         
-        <div class="input-wrapper">
-          <input 
-            type="text" 
-            class="expression-input"
-            [class.error]="error()"
-            placeholder="Ej: p ∧ q → r"
-            [value]="expression()"
-            (input)="expression.set($any($event.target).value); validate()"
-            autocomplete="off"
-            spellcheck="false"
-          />
+        <!-- Botones de operadores -->
+        <div class="operators-bar">
+          @for (op of operators; track op.symbol) {
+            <button 
+              type="button" 
+              class="op-btn"
+              (click)="insertOperator(op.symbol)"
+              [title]="op.label"
+            >
+              {{ op.symbol }}
+            </button>
+          }
           
-          <!-- Botones de operadores -->
-          <div class="operators-bar">
-            @for (op of operators; track op.symbol) {
-              <button 
-                type="button" 
-                class="op-btn"
-                (click)="insertOperator(op.symbol)"
-                [title]="op.label"
-              >
-                {{ op.symbol }}
-              </button>
-            }
-            
-            <div class="op-separator"></div>
-            
-            <button 
-              type="button" 
-              class="action-btn clear-btn"
-              (click)="clear()"
-              title="Limpiar"
-            >
-              Limpiar
-            </button>
-            
-            <button 
-              type="button" 
-              class="action-btn calc-btn"
-              (click)="calculate()"
-              title="Calcular tabla"
-            >
-              Calcular
-            </button>
-          </div>
+          <div class="op-separator"></div>
+          
+          <button 
+            type="button" 
+            class="action-btn clear-btn"
+            (click)="clear()"
+            title="Limpiar"
+          >
+            Limpiar
+          </button>
+          
+          <button 
+            type="button" 
+            class="action-btn simplify-btn"
+            (click)="simplify()"
+            title="Simplificar expresión"
+          >
+            Simplificar
+          </button>
+          
+          <button 
+            type="button" 
+            class="action-btn calc-btn"
+            (click)="calculate()"
+            title="Calcular tabla"
+          >
+            Calcular
+          </button>
         </div>
+      </div>
         
         <!-- Mensaje de error -->
         @if (error()) {
@@ -167,6 +176,39 @@
       </section>
     }
     
+    <!-- Panel de simplificación -->
+    @if (showSimplification() && simplificationSteps().length > 0) {
+      <section class="simplification-panel">
+        <h2 class="section-title">
+          <span class="simplify-icon">⚡</span>
+          Simplificación Paso a Paso
+        </h2>
+        
+        <div class="steps-list">
+          @for (step of simplificationSteps(); track $index; let last = $last) {
+            <div class="step-card" [class.final-step]="last">
+              <div class="step-number">{{ $index + 1 }}</div>
+              <div class="step-content">
+                <div class="step-rule">{{ step.rule }}</div>
+                <div class="step-expr">{{ step.expression }}</div>
+                <div class="step-desc">{{ step.description }}</div>
+              </div>
+              @if (!last) {
+                <div class="step-arrow">↓</div>
+              }
+            </div>
+          }
+        </div>
+        
+        @if (simplificationSteps().length > 1) {
+          <div class="simplify-result">
+            <span class="result-label">Resultado:</span>
+            <span class="result-expr">{{ simplificationSteps()[simplificationSteps().length - 1].expression }}</span>
+          </div>
+        }
+      </section>
+    }
+    
     <!-- Estado vacío -->
     @if (!expression() || variables().length === 0) {
       <section class="empty-state">
@@ -186,6 +228,8 @@
             <button class="example-btn" (click)="setExample('¬p')">¬p</button>
             <button class="example-btn" (click)="setExample('(p ∧ q) → r')">(p ∧ q) → r</button>
             <button class="example-btn" (click)="setExample('p ↔ q')">p ↔ q</button>
+            <button class="example-btn" (click)="setExample('¬(p ∧ q)')">¬(p ∧ q)</button>
+            <button class="example-btn" (click)="setExample('¬p ∨ ¬q')">¬p ∨ ¬q</button>
           </div>
         </div>
       </section>

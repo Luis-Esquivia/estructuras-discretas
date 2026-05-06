@@ -135,6 +135,223 @@ class LogicParser {
   }
 }
 
+// Simplificador paso a paso
+interface SimplificationStep {
+  expression: string;
+  rule: string;
+  description: string;
+}
+
+class BooleanSimplifier {
+  private rules: Array<{
+    pattern: RegExp;
+    replacement: (match: RegExpMatchArray) => string;
+    rule: string;
+    description: string;
+  }>;
+
+  constructor() {
+    this.rules = [
+      // Doble negación: ¬(¬p) = p
+      {
+        pattern: /¬\((¬)([a-zA-Z][a-zA-Z0-9]*)\)/g,
+        replacement: (m) => m[2],
+        rule: 'Doble negación',
+        description: '¬(¬p) = p'
+      },
+      // De Morgan 1: ¬(p ∧ q) = ¬p ∨ ¬q
+      {
+        pattern: /¬\(([a-zA-Z][a-zA-Z0-9]*)\s*∧\s*([a-zA-Z][a-zA-Z0-9]*)\)/g,
+        replacement: (m) => `¬${m[1]} ∨ ¬${m[2]}`,
+        rule: 'De Morgan',
+        description: '¬(p ∧ q) = ¬p ∨ ¬q'
+      },
+      // De Morgan 2: ¬(p ∨ q) = ¬p ∧ ¬q
+      {
+        pattern: /¬\(([a-zA-Z][a-zA-Z0-9]*)\s*∨\s*([a-zA-Z][a-zA-Z0-9]*)\)/g,
+        replacement: (m) => `¬${m[1]} ∧ ¬${m[2]}`,
+        rule: 'De Morgan',
+        description: '¬(p ∨ q) = ¬p ∧ ¬q'
+      },
+      // Absorción 1: p ∨ (p ∧ q) = p
+      {
+        pattern: /([a-zA-Z][a-zA-Z0-9]*)\s*∨\s*\(([a-zA-Z][a-zA-Z0-9]*)\s*∧\s*[a-zA-Z][a-zA-Z0-9]*\)/g,
+        replacement: (m) => m[1],
+        rule: 'Absorción',
+        description: 'p ∨ (p ∧ q) = p'
+      },
+      // Absorción 2: p ∧ (p ∨ q) = p
+      {
+        pattern: /([a-zA-Z][a-zA-Z0-9]*)\s*∧\s*\(([a-zA-Z][a-zA-Z0-9]*)\s*∨\s*[a-zA-Z][a-zA-Z0-9]*\)/g,
+        replacement: (m) => m[1],
+        rule: 'Absorción',
+        description: 'p ∧ (p ∨ q) = p'
+      },
+      // Idempotencia 1: p ∧ p = p
+      {
+        pattern: /([a-zA-Z][a-zA-Z0-9]*)\s*∧\s*\1/g,
+        replacement: (m) => m[1],
+        rule: 'Idempotencia',
+        description: 'p ∧ p = p'
+      },
+      // Idempotencia 2: p ∨ p = p
+      {
+        pattern: /([a-zA-Z][a-zA-Z0-9]*)\s*∨\s*\1/g,
+        replacement: (m) => m[1],
+        rule: 'Idempotencia',
+        description: 'p ∨ p = p'
+      },
+      // Condicional: p → q = ¬p ∨ q
+      {
+        pattern: /([a-zA-Z][a-zA-Z0-9]*)\s*→\s*([a-zA-Z][a-zA-Z0-9]*)/g,
+        replacement: (m) => `¬${m[1]} ∨ ${m[2]}`,
+        rule: 'Condicional',
+        description: 'p → q = ¬p ∨ q'
+      },
+      // Bicondicional: p ↔ q = (¬p ∨ q) ∧ (¬q ∨ p)
+      {
+        pattern: /([a-zA-Z][a-zA-Z0-9]*)\s*↔\s*([a-zA-Z][a-zA-Z0-9]*)/g,
+        replacement: (m) => `(¬${m[1]} ∨ ${m[2]}) ∧ (¬${m[2]} ∨ ${m[1]})`,
+        rule: 'Bicondicional',
+        description: 'p ↔ q = (¬p ∨ q) ∧ (¬q ∨ p)'
+      },
+      // Neutralidad 1: p ∧ 1 = p (asumiendo 1 = tautología)
+      {
+        pattern: /([a-zA-Z][a-zA-Z0-9]*)\s*∧\s*1/g,
+        replacement: (m) => m[1],
+        rule: 'Identidad',
+        description: 'p ∧ 1 = p'
+      },
+      // Neutralidad 2: p ∨ 0 = p (asumiendo 0 = contradicción)
+      {
+        pattern: /([a-zA-Z][a-zA-Z0-9]*)\s*∨\s*0/g,
+        replacement: (m) => m[1],
+        rule: 'Identidad',
+        description: 'p ∨ 0 = p'
+      },
+      // Dominación 1: p ∨ 1 = 1
+      {
+        pattern: /([a-zA-Z][a-zA-Z0-9]*)\s*∨\s*1/g,
+        replacement: () => '1',
+        rule: 'Dominación',
+        description: 'p ∨ 1 = 1'
+      },
+      // Dominación 2: p ∧ 0 = 0
+      {
+        pattern: /([a-zA-Z][a-zA-Z0-9]*)\s*∧\s*0/g,
+        replacement: () => '0',
+        rule: 'Dominación',
+        description: 'p ∧ 0 = 0'
+      },
+      // Complemento 1: p ∨ ¬p = 1
+      {
+        pattern: /([a-zA-Z][a-zA-Z0-9]*)\s*∨\s*¬\1/g,
+        replacement: () => '1',
+        rule: 'Complemento',
+        description: 'p ∨ ¬p = 1 (Tercio Excluido)'
+      },
+      // Complemento 2: p ∧ ¬p = 0
+      {
+        pattern: /([a-zA-Z][a-zA-Z0-9]*)\s*∧\s*¬\1/g,
+        replacement: () => '0',
+        rule: 'Complemento',
+        description: 'p ∧ ¬p = 0 (Contradicción)'
+      },
+      // Asociativa: (p ∨ q) ∨ r = p ∨ q ∨ r
+      {
+        pattern: /\(([a-zA-Z][a-zA-Z0-9]*)\s*∨\s*([a-zA-Z][a-zA-Z0-9]*)\)\s*∨\s*([a-zA-Z][a-zA-Z0-9]*)/g,
+        replacement: (m) => `${m[1]} ∨ ${m[2]} ∨ ${m[3]}`,
+        rule: 'Asociativa',
+        description: '(p ∨ q) ∨ r = p ∨ q ∨ r'
+      },
+      // Asociativa AND: (p ∧ q) ∧ r = p ∧ q ∧ r
+      {
+        pattern: /\(([a-zA-Z][a-zA-Z0-9]*)\s*∧\s*([a-zA-Z][a-zA-Z0-9]*)\)\s*∧\s*([a-zA-Z][a-zA-Z0-9]*)/g,
+        replacement: (m) => `${m[1]} ∧ ${m[2]} ∧ ${m[3]}`,
+        rule: 'Asociativa',
+        description: '(p ∧ q) ∧ r = p ∧ q ∧ r'
+      },
+      // Eliminación paréntesis con ¬: ¬(p) = ¬p
+      {
+        pattern: /¬\(([a-zA-Z][a-zA-Z0-9]*)\)/g,
+        replacement: (m) => `¬${m[1]}`,
+        rule: 'Eliminación paréntesis',
+        description: '¬(p) = ¬p'
+      },
+      // Eliminación paréntesis simples: (p) = p
+      {
+        pattern: /\(([a-zA-Z][a-zA-Z0-9]*)\)/g,
+        replacement: (m) => m[1],
+        rule: 'Eliminación paréntesis',
+        description: '(p) = p'
+      }
+    ];
+  }
+
+  simplify(expr: string): SimplificationStep[] {
+    const steps: SimplificationStep[] = [];
+    let current = this.normalize(expr);
+    let prev = '';
+    let iterations = 0;
+    const maxIterations = 50;
+
+    steps.push({
+      expression: current,
+      rule: 'Inicial',
+      description: 'Expresión original'
+    });
+
+    while (current !== prev && iterations < maxIterations) {
+      prev = current;
+      iterations++;
+      
+      let changed = false;
+      
+      for (const rule of this.rules) {
+        const newExpr = current.replace(rule.pattern, (...args) => {
+          const result = rule.replacement(args as RegExpMatchArray);
+          return result;
+        });
+        
+        if (newExpr !== current) {
+          current = this.normalize(newExpr);
+          steps.push({
+            expression: current,
+            rule: rule.rule,
+            description: rule.description
+          });
+          changed = true;
+          break;
+        }
+      }
+
+      if (!changed) break;
+    }
+
+    if (current === prev && steps.length > 1) {
+      steps.push({
+        expression: current,
+        rule: 'Forma canónica',
+        description: 'No se pueden aplicar más reglas'
+      });
+    }
+
+    return steps;
+  }
+
+  private normalize(expr: string): string {
+    return expr
+      .replace(/\s+/g, ' ')
+      .replace(/\s*\(\s*/g, '(')
+      .replace(/\s*\)\s*/g, ')')
+      .replace(/\s*∧\s*/g, ' ∧ ')
+      .replace(/\s*∨\s*/g, ' ∨ ')
+      .replace(/\s*→\s*/g, ' → ')
+      .replace(/\s*↔\s*/g, ' ↔ ')
+      .trim();
+  }
+}
+
 // Generador de Tablas
 class TruthTableGenerator {
   generate(expr: string, variables: string[]): TruthTableRow[] {
@@ -170,9 +387,11 @@ export class LogicComponent {
   readonly expression = signal<string>('');
   readonly error = signal<string | null>(null);
   readonly showTable = signal<boolean>(false);
+  readonly showSimplification = signal<boolean>(false);
   
   private parser = new LogicParser();
   private generator = new TruthTableGenerator();
+  private simplifier = new BooleanSimplifier();
   
   readonly variables = computed(() => {
     const expr = this.expression();
@@ -202,6 +421,12 @@ export class LogicComponent {
   
   readonly tooManyVars = computed(() => this.variables().length > 5);
   
+  readonly simplificationSteps = computed(() => {
+    const expr = this.expression();
+    if (!expr || this.error()) return [];
+    return this.simplifier.simplify(expr);
+  });
+  
   readonly operators = [
     { symbol: '¬', label: 'NOT' },
     { symbol: '∧', label: 'AND' },
@@ -221,6 +446,7 @@ export class LogicComponent {
     this.expression.set('');
     this.error.set(null);
     this.showTable.set(false);
+    this.showSimplification.set(false);
   }
   
   calculate() {
@@ -228,6 +454,17 @@ export class LogicComponent {
     if (!this.error()) {
       this.showTable.set(true);
     }
+  }
+  
+  simplify() {
+    this.validate();
+    if (!this.error()) {
+      this.showSimplification.set(true);
+    }
+  }
+  
+  toggleSimplification() {
+    this.showSimplification.update(v => !v);
   }
   
   validate() {

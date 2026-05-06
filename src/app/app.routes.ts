@@ -14,5 +14,13 @@ export const routes: Routes = [
     path: 'graphs',
     loadComponent: () => import('./features/graphs/graphs.component').then(m => m.GraphsComponent)
   },
+  {
+    path: 'quiz',
+    loadComponent: () => import('./features/quiz/quiz.component').then(m => m.QuizComponent)
+  },
+  {
+    path: 'tutorial',
+    loadComponent: () => import('./features/tutorial/tutorial.component').then(m => m.TutorialComponent)
+  },
   { path: '**', redirectTo: 'logic' }
 ];

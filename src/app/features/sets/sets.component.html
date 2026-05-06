@@ -91,29 +91,96 @@
       
       <!-- Panel derecho: Venn -->
       <section class="venn-panel">
-        <h2 class="panel-title">Diagrama de Venn</h2>
+        <div class="panel-header">
+          <h2 class="panel-title">Diagrama de Venn</h2>
+          @if (setA() && (setB() || selectedOp() === 'complement')) {
+            <button 
+              class="btn-animate" 
+              [class.active]="showStepByStep()"
+              (click)="toggleStepByStep()"
+            >
+              {{ showStepByStep() ? 'Ocultar pasos' : 'Ver pasos' }}
+            </button>
+          }
+        </div>
+        
+        @if (showStepByStep() && animationSteps().length > 0) {
+          <div class="step-animation">
+            <div class="animation-controls">
+              <button class="ctrl-btn" (click)="prevStep()" [disabled]="currentStep() === 0">&lt;</button>
+              @if (!isAnimating()) {
+                <button class="ctrl-btn play-btn" (click)="playAnimation()">▶</button>
+              } @else {
+                <button class="ctrl-btn stop-btn" (click)="stopAnimation()">⏸</button>
+              }
+              <button class="ctrl-btn" (click)="nextStep()" [disabled]="currentStep() === animationSteps().length - 1">&gt;</button>
+              <button class="ctrl-btn reset-btn" (click)="resetAnimation()">↺</button>
+            </div>
+            
+            @if (currentStepData()) {
+              <div class="step-info-panel">
+                <div class="step-counter">Paso {{ currentStep() + 1 }} de {{ animationSteps().length }}</div>
+                <div class="step-description">{{ currentStepData()?.description }}</div>
+                <div class="step-elements">
+                  @if (currentStepData()?.elements && currentStepData()!.elements.length > 0) {
+                    <span class="element" [class]="'highlight-' + currentStepData()?.highlight">
+                      {{ '{' + currentStepData()?.elements?.join(', ') + '}' }}
+                    </span>
+                  } @else {
+                    <span class="element empty">Conjunto vacio</span>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
         
         @if (setA() && (setB() || selectedOp() === 'complement')) {
           <div class="venn-diagram">
-            <svg viewBox="0 0 300 180" class="venn-svg">
+            <svg viewBox="0 0 300 180" class="venn-svg" [class.animating]="showStepByStep()">
               @if (selectedOp() === 'complement') {
                 <rect x="10" y="10" width="280" height="160" fill="none" stroke="#666" stroke-width="2" stroke-dasharray="5,5"/>
               }
-              <circle cx="115" cy="90" r="70" fill="rgba(234,88,12,0.2)" stroke="#ea580c" stroke-width="2"/>
-              <text x="75" y="55" class="venn-label" fill="#ea580c">A</text>
+              
+              <!-- Circulo A -->
+              <circle 
+                cx="115" cy="90" r="70" 
+                [attr.fill]="getHighlightClass() === 'a' || getHighlightClass() === 'both' || getHighlightClass() === 'result' 
+                  ? 'rgba(234,88,12,0.5)' 
+                  : 'rgba(234,88,12,0.2)'"
+                [attr.stroke]="getHighlightClass() === 'a' || getHighlightClass() === 'both' || getHighlightClass() === 'result' 
+                  ? '#c2410c' 
+                  : '#ea580c'"
+                stroke-width="2"
+                class="venn-circle-a"
+              />
+              <text x="75" y="55" class="venn-label" [attr.fill]="getHighlightClass() === 'a' || getHighlightClass() === 'both' || getHighlightClass() === 'result' ? '#c2410c' : '#ea580c'">A</text>
+              
               @if (selectedOp() !== 'complement') {
-                <circle cx="185" cy="90" r="70" fill="rgba(8,145,178,0.2)" stroke="#0891b2" stroke-width="2"/>
-                <text x="225" y="55" class="venn-label" fill="#0891b2">B</text>
+                <!-- Circulo B -->
+                <circle 
+                  cx="185" cy="90" r="70" 
+                  [attr.fill]="getHighlightClass() === 'b' || getHighlightClass() === 'both' || getHighlightClass() === 'result' 
+                    ? 'rgba(8,145,178,0.5)' 
+                    : 'rgba(8,145,178,0.2)'"
+                  [attr.stroke]="getHighlightClass() === 'b' || getHighlightClass() === 'both' || getHighlightClass() === 'result' 
+                    ? '#0e7490' 
+                    : '#0891b2'"
+                  stroke-width="2"
+                  class="venn-circle-b"
+                />
+                <text x="225" y="55" class="venn-label" [attr.fill]="getHighlightClass() === 'b' || getHighlightClass() === 'both' || getHighlightClass() === 'result' ? '#0e7490' : '#0891b2'">B</text>
               }
+              
               @for (r of getShaded(); track r.label; let i = $index) {
                 @if (r.inA && r.inB && selectedOp() !== 'complement') {
-                  <text x="150" y="95" class="venn-element">{{ r.label }}</text>
+                  <text x="150" y="95" class="venn-element" [class.venn-highlight]="getHighlightClass() === 'both' || getHighlightClass() === 'result'">{{ r.label }}</text>
                 } @else if (r.inA && !r.inB) {
-                  <text x="80" [attr.y]="70 + i * 22" class="venn-element">{{ r.label }}</text>
+                  <text x="80" [attr.y]="70 + i * 22" class="venn-element" [class.venn-highlight]="getHighlightClass() === 'a' || getHighlightClass() === 'result'">{{ r.label }}</text>
                 } @else if (!r.inA && r.inB) {
-                  <text x="220" [attr.y]="70 + i * 22" class="venn-element">{{ r.label }}</text>
+                  <text x="220" [attr.y]="70 + i * 22" class="venn-element" [class.venn-highlight]="getHighlightClass() === 'b' || getHighlightClass() === 'result'">{{ r.label }}</text>
                 } @else if (selectedOp() === 'complement') {
-                  <text x="50 + i * 35" y="160" class="venn-element">{{ r.label }}</text>
+                  <text x="50 + i * 35" y="160" class="venn-element" [class.venn-highlight]="getHighlightClass() === 'result'">{{ r.label }}</text>
                 }
               }
             </svg>

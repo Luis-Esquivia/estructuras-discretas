@@ -1,0 +1,168 @@
+<main class="main-content">
+  <div class="container">
+    <header class="module-header">
+      <h1 class="module-title"><span class="title-icon">📚</span> Tutoriales Guiados</h1>
+      <p class="module-desc">Aprende paso a paso con explicaciones detalladas</p>
+    </header>
+    
+    <!-- Selection: Module -->
+    @if (!selectedModule()) {
+      <section class="module-selection">
+        <h2 class="section-title">Selecciona un tema</h2>
+        <div class="modules-grid">
+          <button class="module-card" (click)="selectModule('logic')">
+            <span class="module-icon logic-icon">{{ moduleIcons['logic'] }}</span>
+            <span class="module-name">Lógica</span>
+            <span class="module-count">2 tutoriales</span>
+          </button>
+          <button class="module-card" (click)="selectModule('sets')">
+            <span class="module-icon sets-icon">{{ moduleIcons['sets'] }}</span>
+            <span class="module-name">Conjuntos</span>
+            <span class="module-count">1 tutorial</span>
+          </button>
+          <button class="module-card" (click)="selectModule('graphs')">
+            <span class="module-icon graphs-icon">{{ moduleIcons['graphs'] }}</span>
+            <span class="module-name">Grafos</span>
+            <span class="module-count">2 tutoriales</span>
+          </button>
+        </div>
+      </section>
+    }
+    
+    <!-- Selection: Tutorial -->
+    @if (selectedModule() && !selectedTutorial()) {
+      <section class="tutorial-selection">
+        <button class="back-btn" (click)="selectedModule.set(null)">
+          ← Volver a temas
+        </button>
+        
+        <h2 class="section-title">{{ moduleLabels[selectedModule()!] }}</h2>
+        
+        <div class="tutorials-list">
+          @for (t of filteredTutorials(); track t.id) {
+            <button class="tutorial-card" (click)="selectTutorial(t)">
+              <div class="tutorial-info">
+                <h3 class="tutorial-title">{{ t.title }}</h3>
+                <p class="tutorial-desc">{{ t.description }}</p>
+              </div>
+              <div class="tutorial-meta">
+                <span class="tutorial-steps">{{ t.steps.length }} pasos</span>
+                <span class="tutorial-arrow">→</span>
+              </div>
+            </button>
+          }
+        </div>
+      </section>
+    }
+    
+    <!-- Tutorial Content -->
+    @if (selectedTutorial()) {
+      <section class="tutorial-view">
+        <button class="back-btn" (click)="backToList()">
+          ← {{ moduleLabels[selectedTutorial()!.module] }}
+        </button>
+        
+        <!-- Tutorial Header -->
+        <div class="tutorial-header">
+          <div class="tutorial-badge" [class]="'badge-' + selectedTutorial()!.module">
+            {{ moduleLabels[selectedTutorial()!.module] }}
+          </div>
+          <h2 class="tutorial-title">{{ selectedTutorial()!.title }}</h2>
+          <p class="tutorial-problem">{{ selectedTutorial()!.problem }}</p>
+        </div>
+        
+        <!-- Progress Bar -->
+        <div class="progress-container">
+          <div class="progress-bar">
+            <div class="progress-fill" [style.width.%]="progress()"></div>
+          </div>
+          <span class="progress-text">Paso {{ currentStep() + 1 }} de {{ selectedTutorial()!.steps.length }}</span>
+        </div>
+        
+        <!-- Step Navigation -->
+        <div class="step-dots">
+          @for (step of selectedTutorial()!.steps; track $index; let i = $index) {
+            <button 
+              class="step-dot" 
+              [class.current]="i === currentStep()"
+              [class.past]="i < currentStep()"
+              (click)="goToStep(i)"
+              [title]="'Paso ' + (i + 1)"
+            ></button>
+          }
+        </div>
+        
+        <!-- Step Content -->
+        @if (currentStepData()) {
+          <div class="step-content">
+            <div class="step-header">
+              <div class="step-number">{{ currentStep() + 1 }}</div>
+              <h3 class="step-title">{{ currentStepData()!.title }}</h3>
+            </div>
+            
+            <div class="step-body">
+              <p class="step-text">{{ currentStepData()!.content }}</p>
+              
+              @if (currentStepData()!.hint) {
+                <div class="step-hint">
+                  <span class="hint-icon">💡</span>
+                  <span class="hint-text">{{ currentStepData()!.hint }}</span>
+                </div>
+              }
+            </div>
+          </div>
+        }
+        
+        <!-- Navigation Controls -->
+        <div class="tutorial-nav">
+          <button 
+            class="nav-btn prev-btn" 
+            (click)="prevStep()"
+            [disabled]="isFirstStep()"
+          >
+            ◀ Anterior
+          </button>
+          
+          <div class="nav-center">
+            @if (!isFirstStep()) {
+              <button class="restart-btn" (click)="restart()" title="Reiniciar desde el principio">
+                ↺
+              </button>
+            }
+          </div>
+          
+          @if (isLastStep()) {
+            <button class="nav-btn complete-btn" (click)="backToList()">
+              ✓ Completar
+            </button>
+          } @else {
+            <button class="nav-btn next-btn" (click)="nextStep()">
+              Siguiente ▶
+            </button>
+          }
+        </div>
+        
+        <!-- Steps List Sidebar -->
+        <div class="steps-sidebar">
+          <h4 class="sidebar-title">Contenido del tutorial</h4>
+          <ol class="steps-list">
+            @for (step of selectedTutorial()!.steps; track $index; let i = $index) {
+              <li 
+                class="step-item" 
+                [class.current]="i === currentStep()"
+                [class.completed]="i < currentStep()"
+                (click)="goToStep(i)"
+              >
+                <span class="step-num">{{ i + 1 }}</span>
+                <span class="step-name">{{ step.title }}</span>
+                @if (i < currentStep()) {
+                  <span class="step-check">✓</span>
+                }
+              </li>
+            }
+          </ol>
+        </div>
+      </section>
+    }
+  </div>
+</main>

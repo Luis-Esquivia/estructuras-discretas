@@ -1,0 +1,239 @@
+<main class="main-content">
+  <div class="container">
+    <header class="module-header">
+      <h1 class="module-title"><span class="title-icon">📝</span> Modo Examen</h1>
+      <p class="module-desc">Pon a prueba tus conocimientos con preguntas de todos los módulos</p>
+    </header>
+    
+    <!-- Configuración inicial -->
+    @if (showConfig()) {
+      <section class="config-panel">
+        <div class="config-card">
+          <h2 class="config-title">Configurar Examen</h2>
+          
+          <div class="config-group">
+            <label class="config-label">Módulo</label>
+            <div class="config-options">
+              @for (mod of ['all', 'logic', 'sets', 'graphs']; track mod) {
+                <button 
+                  class="config-btn" 
+                  [class.active]="module() === mod"
+                  (click)="module.set($any(mod))"
+                >
+                  {{ moduleLabels[mod] }}
+                </button>
+              }
+            </div>
+          </div>
+          
+          <div class="config-group">
+            <label class="config-label">Dificultad</label>
+            <div class="config-options">
+              @for (diff of ['easy', 'medium', 'hard']; track diff) {
+                <button 
+                  class="config-btn" 
+                  [class.active]="difficulty() === $any(diff)"
+                  (click)="difficulty.set($any(diff))"
+                >
+                  {{ difficultyLabels[$any(diff)] }}
+                </button>
+              }
+            </div>
+          </div>
+          
+          <div class="config-group">
+            <label class="config-label">Cantidad de preguntas</label>
+            <div class="config-options">
+              @for (num of [5, 10, 15, 20]; track num) {
+                <button 
+                  class="config-btn" 
+                  [class.active]="totalQuestions() === num"
+                  (click)="totalQuestions.set(num)"
+                >
+                  {{ num }}
+                </button>
+              }
+            </div>
+          </div>
+          
+          <div class="config-group">
+            <label class="config-label">Tiempo por pregunta (minutos)</label>
+            <div class="config-options">
+              @for (time of [1, 2, 5, 10]; track time) {
+                <button 
+                  class="config-btn" 
+                  [class.active]="timeLimit() === time"
+                  (click)="timeLimit.set(time)"
+                >
+                  {{ time }} min
+                </button>
+              }
+            </div>
+          </div>
+          
+          <div class="config-summary">
+            <div class="summary-item">
+              <span class="summary-label">Total tiempo:</span>
+              <span class="summary-value">{{ timeLimit() * totalQuestions() }} minutos</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Preguntas disponibles:</span>
+              <span class="summary-value">{{ totalQuestions() }}+</span>
+            </div>
+          </div>
+          
+          <button class="btn-start" (click)="startQuiz()">
+            Comenzar Examen
+          </button>
+        </div>
+      </section>
+    }
+    
+    <!-- Quiz activo -->
+    @if (state()?.isActive && !state()?.isFinished) {
+      <section class="quiz-panel">
+        <!-- Header del quiz -->
+        <div class="quiz-header">
+          <div class="quiz-progress">
+            <span class="progress-text">Pregunta {{ (state()?.currentQuestion ?? 0) + 1 }} de {{ state()?.totalQuestions }}</span>
+            <div class="progress-bar">
+              <div class="progress-fill" [style.width.%]="progress()"></div>
+            </div>
+          </div>
+          <div class="quiz-timer" [class.warning]="timeRemaining() < 60">
+            <span class="timer-icon">⏱</span>
+            <span class="timer-value">{{ formatTime() }}</span>
+          </div>
+        </div>
+        
+        <!-- Pregunta -->
+        <div class="question-card">
+          <div class="question-meta">
+            <span class="question-module" [class]="'module-' + currentQuestion()?.module">
+              {{ moduleLabels[currentQuestion()?.module ?? 'logic'] }}
+            </span>
+            <span class="question-difficulty" [class]="'diff-' + currentQuestion()?.difficulty">
+              {{ difficultyLabels[currentQuestion()?.difficulty ?? 'medium'] }}
+            </span>
+          </div>
+          
+          <h3 class="question-text">{{ currentQuestion()?.question }}</h3>
+          
+          <div class="options-list">
+            @for (option of currentQuestion()?.options ?? []; track $index; let i = $index) {
+              <button 
+                class="option-btn" 
+                [class]="getOptionClass(i)"
+                (click)="selectAnswer(i)"
+              >
+                <span class="option-letter">{{ ['A', 'B', 'C', 'D'][$index] }}</span>
+                <span class="option-text">{{ option }}</span>
+              </button>
+            }
+          </div>
+        </div>
+        
+        <!-- Navegación -->
+        <div class="quiz-nav">
+          <button 
+            class="nav-btn prev-btn" 
+            (click)="prevQuestion()"
+            [disabled]="(state()?.currentQuestion ?? 0) === 0"
+          >
+            ◀ Anterior
+          </button>
+          
+          <div class="nav-indicators">
+            @for (q of state()?.questions ?? []; track q.id; let i = $index) {
+              <span 
+                class="indicator" 
+                [class.current]="i === (state()?.currentQuestion ?? 0)"
+                [class.answered]="getIsAnswered(i)"
+              ></span>
+            }
+          </div>
+          
+          @if (isLastQuestion()) {
+            <button class="nav-btn finish-btn" (click)="finishQuiz()">
+              Terminar ▶
+            </button>
+          } @else {
+            <button class="nav-btn next-btn" (click)="nextQuestion()">
+              Siguiente ▶
+            </button>
+          }
+        </div>
+      </section>
+    }
+    
+    <!-- Resultados -->
+    @if (state()?.isFinished) {
+      <section class="results-panel">
+        <div class="results-header">
+          <h2 class="results-title">Resultados del Examen</h2>
+        </div>
+        
+        <div class="score-card" [class]="getScoreColor()">
+          <div class="score-circle">
+            <span class="score-percentage">{{ score().percentage }}%</span>
+          </div>
+          <div class="score-details">
+            <div class="score-stat correct">
+              <span class="stat-icon">✓</span>
+              <span class="stat-value">{{ score().correct }}</span>
+              <span class="stat-label">Correctas</span>
+            </div>
+            <div class="score-stat incorrect">
+              <span class="stat-icon">✗</span>
+              <span class="stat-value">{{ score().total - score().correct }}</span>
+              <span class="stat-label">Incorrectas</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="feedback-card">
+          @if (score().percentage >= 80) {
+            <div class="feedback-icon">🌟</div>
+            <h3 class="feedback-title">¡Excelente!</h3>
+            <p class="feedback-text">Tienes un gran dominio de los conceptos. ¡Sigue así!</p>
+          } @else if (score().percentage >= 60) {
+            <div class="feedback-icon">👍</div>
+            <h3 class="feedback-title">¡Buen trabajo!</h3>
+            <p class="feedback-text">Vas por buen camino. Repasa los temas con menor puntuación.</p>
+          } @else {
+            <div class="feedback-icon">📚</div>
+            <h3 class="feedback-title">Sigue practicando</h3>
+            <p class="feedback-text">Revisa los conceptos y vuelve a intentarlo. ¡Tú puedes!</p>
+          }
+        </div>
+        
+        <!-- Revisar respuestas -->
+        <div class="review-section">
+          <h3 class="review-title">Revisar Respuestas</h3>
+          
+          @for (q of state()?.questions ?? []; track q.id; let i = $index) {
+            <div class="review-item" [class.correct]="getAnswer(i)?.correct" [class.incorrect]="!getAnswer(i)?.correct">
+              <div class="review-header">
+                <span class="review-number">{{ i + 1 }}</span>
+                <span class="review-status">{{ getAnswer(i)?.correct ? '✓ Correcto' : '✗ Incorrecto' }}</span>
+              </div>
+              <p class="review-question">{{ q.question }}</p>
+              <p class="review-explanation">
+                <strong>Explicación:</strong> {{ q.explanation }}
+              </p>
+              @if (!getAnswer(i)?.correct) {
+                <p class="review-correct-answer">
+                  <strong>Respuesta correcta:</strong> {{ q.options[q.correctAnswer] }}
+                </p>
+              }
+            </div>
+          }
+        </div>
+        
+        <button class="btn-restart" (click)="restartQuiz()">
+          Volver a Configurar
+        </button>
+      </section>
+    }
+  </div>
+</main>

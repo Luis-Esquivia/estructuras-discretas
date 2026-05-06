@@ -511,3 +511,68 @@
   font-size: 0.875rem;
   margin: 0;
 }
+
+/* Responsive */
+@media (max-width: 640px) {
+  .main-content {
+    padding: 1rem 0.75rem;
+  }
+  
+  .module-title {
+    font-size: 1.5rem;
+  }
+  
+  .main-grid {
+    gap: 1rem;
+  }
+  
+  .canvas-panel, .algo-panel {
+    padding: 1rem;
+    border-radius: 0.75rem;
+  }
+  
+  .graph-canvas {
+    height: 280px;
+  }
+  
+  .panel-header {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+  
+  .panel-actions {
+    width: 100%;
+  }
+  
+  .action-btn {
+    flex: 1;
+    text-align: center;
+  }
+  
+  .algo-buttons {
+    flex-direction: column;
+  }
+  
+  .algo-btn {
+    padding: 0.625rem;
+    font-size: 0.9rem;
+  }
+  
+  .add-node-row {
+    flex-direction: column;
+  }
+  
+  .node-input {
+    width: 100%;
+  }
+  
+  .btn-add, .btn-example {
+    width: 100%;
+  }
+  
+  .adj-list {
+    font-size: 0.7rem;
+    padding: 0.5rem;
+  }
+}

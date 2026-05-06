@@ -28,6 +28,14 @@ interface VennRegion {
   shade: boolean;
 }
 
+// Paso de animación
+interface AnimationStep {
+  description: string;
+  elements: (string | number)[];
+  highlight: 'a' | 'b' | 'both' | 'none' | 'result';
+  operation: string;
+}
+
 // Sets Logic Service
 class SetLogic {
   createSet<T>(elements: T[]): SetModel<T> {
@@ -86,6 +94,12 @@ export class SetsComponent {
   compMax = signal<number>(10);
   complementU = signal<string>('');
   errorMsg = signal<string | null>(null);
+  
+  // Animación paso a paso
+  animationSteps = signal<AnimationStep[]>([]);
+  currentStep = signal<number>(0);
+  isAnimating = signal<boolean>(false);
+  showStepByStep = signal<boolean>(false);
   
   operations = [
     { type: 'union' as SetOpType, symbol: 'U', label: 'Union' },
@@ -213,16 +227,242 @@ export class SetsComponent {
   
   getSym(): string { return this.operations.find(o => o.type === this.selectedOp())?.symbol || ''; }
   
+  quickA() { const s = this.logic.createSet([1,2,3]); s.name='A'; this.sets.update(x=>[...x,s]); this.selectedA.set(s.id); }
+  quickB() { const s = this.logic.createSet([3,4,5]); s.name='B'; this.sets.update(x=>[...x,s]); this.selectedB.set(s.id); }
+  quickC() { const s = this.logic.createSet(['a','b','c']); s.name='C'; this.sets.update(x=>[...x,s]); }
+  
   clearAll() {
     this.sets.set([]);
     this.selectedA.set(null);
     this.selectedB.set(null);
     this.result.set(null);
+    this.animationSteps.set([]);
+    this.currentStep.set(0);
   }
   
-  quickA() { const s = this.logic.createSet([1,2,3]); s.name='A'; this.sets.update(x=>[...x,s]); this.selectedA.set(s.id); }
-  quickB() { const s = this.logic.createSet([3,4,5]); s.name='B'; this.sets.update(x=>[...x,s]); this.selectedB.set(s.id); }
-  quickC() { const s = this.logic.createSet(['a','b','c']); s.name='C'; this.sets.update(x=>[...x,s]); }
+  // ===== Animación paso a paso =====
+  toggleStepByStep() {
+    this.showStepByStep.update(v => !v);
+    if (this.showStepByStep()) {
+      this.generateAnimationSteps();
+    }
+  }
+  
+  generateAnimationSteps() {
+    const a = this.setA();
+    const b = this.setB();
+    const op = this.selectedOp();
+    const steps: AnimationStep[] = [];
+    
+    if (!a) return;
+    
+    // Paso 1: Mostrar conjunto A
+    steps.push({
+      description: `Conjunto A tiene ${a.elements.length} elemento${a.elements.length !== 1 ? 's' : ''}`,
+      elements: a.elements,
+      highlight: 'a',
+      operation: 'A'
+    });
+    
+    // Solo para operaciones binarias, mostrar B
+    if (b && op !== 'complement') {
+      // Paso 2: Mostrar conjunto B
+      steps.push({
+        description: `Conjunto B tiene ${b.elements.length} elemento${b.elements.length !== 1 ? 's' : ''}`,
+        elements: b.elements,
+        highlight: 'b',
+        operation: 'B'
+      });
+      
+      // Paso 3: Explicar la operación
+      const opDesc = this.getOpDescription(op);
+      steps.push({
+        description: opDesc,
+        elements: [],
+        highlight: 'none',
+        operation: opDesc
+      });
+      
+      // Pasos 4+: Mostrar cada elemento que pertenece al resultado
+      const onlyA = a.elements.filter(e => !b.elements.some(be => String(e) === String(be)));
+      const onlyB = b.elements.filter(e => !a.elements.some(ae => String(e) === String(ae)));
+      const inBoth = a.elements.filter(e => b.elements.some(be => String(e) === String(be)));
+      
+      switch (op) {
+        case 'union':
+          if (onlyA.length > 0) {
+            steps.push({
+              description: `Elementos solo en A: ${onlyA.join(', ')}`,
+              elements: onlyA,
+              highlight: 'a',
+              operation: 'A - B'
+            });
+          }
+          if (onlyB.length > 0) {
+            steps.push({
+              description: `Elementos solo en B: ${onlyB.join(', ')}`,
+              elements: onlyB,
+              highlight: 'b',
+              operation: 'B - A'
+            });
+          }
+          if (inBoth.length > 0) {
+            steps.push({
+              description: `Elementos en A y B: ${inBoth.join(', ')}`,
+              elements: inBoth,
+              highlight: 'both',
+              operation: 'A n B'
+            });
+          }
+          break;
+          
+        case 'intersection':
+          if (inBoth.length > 0) {
+            steps.push({
+              description: `Elementos comunes: ${inBoth.join(', ')}`,
+              elements: inBoth,
+              highlight: 'both',
+              operation: 'A n B'
+            });
+          } else {
+            steps.push({
+              description: 'No hay elementos en común',
+              elements: [],
+              highlight: 'none',
+              operation: 'Vacio'
+            });
+          }
+          break;
+          
+        case 'difference':
+          if (onlyA.length > 0) {
+            steps.push({
+              description: `Elementos en A pero no en B: ${onlyA.join(', ')}`,
+              elements: onlyA,
+              highlight: 'a',
+              operation: 'A - B'
+            });
+          }
+          break;
+          
+        case 'symmetric-diff':
+          if (onlyA.length > 0) {
+            steps.push({
+              description: `Elementos solo en A: ${onlyA.join(', ')}`,
+              elements: onlyA,
+              highlight: 'a',
+              operation: 'A - B'
+            });
+          }
+          if (onlyB.length > 0) {
+            steps.push({
+              description: `Elementos solo en B: ${onlyB.join(', ')}`,
+              elements: onlyB,
+              highlight: 'b',
+              operation: 'B - A'
+            });
+          }
+          break;
+      }
+    } else if (op === 'complement') {
+      const u = this.universal();
+      const opDesc = `Complemento de A respecto a U`;
+      steps.push({
+        description: opDesc,
+        elements: [],
+        highlight: 'none',
+        operation: opDesc
+      });
+      
+      if (u) {
+        const complement = u.elements.filter(e => !a.elements.some(ae => String(e) === String(ae)));
+        steps.push({
+          description: `Elementos en U pero no en A: ${complement.join(', ')}`,
+          elements: complement,
+          highlight: 'none',
+          operation: "A'"
+        });
+      }
+    }
+    
+    // Paso final: Resultado
+    const r = this.result();
+    if (r) {
+      steps.push({
+        description: `Resultado final: {${r.elements.join(', ') || 'vacio'}} (${r.elements.length} elemento${r.elements.length !== 1 ? 's' : ''})`,
+        elements: r.elements,
+        highlight: 'result',
+        operation: r.name
+      });
+    }
+    
+    this.animationSteps.set(steps);
+    this.currentStep.set(0);
+    this.isAnimating.set(false);
+  }
+  
+  private getOpDescription(op: SetOpType): string {
+    switch (op) {
+      case 'union': return 'Union: elementos en A o en B (o ambos)';
+      case 'intersection': return 'Interseccion: elementos en A Y en B';
+      case 'difference': return 'Diferencia: elementos en A pero no en B';
+      case 'symmetric-diff': return 'Diferencia Simetrica: elementos en A o B pero no en ambos';
+      case 'complement': return 'Complemento: elementos fuera de A';
+      default: return '';
+    }
+  }
+  
+  nextStep() {
+    if (this.currentStep() < this.animationSteps().length - 1) {
+      this.currentStep.update(s => s + 1);
+    }
+  }
+  
+  prevStep() {
+    if (this.currentStep() > 0) {
+      this.currentStep.update(s => s - 1);
+    }
+  }
+  
+  playAnimation() {
+    this.isAnimating.set(true);
+    this.currentStep.set(0);
+    this.animateNext();
+  }
+  
+  private animateNext() {
+    if (!this.isAnimating()) return;
+    
+    if (this.currentStep() < this.animationSteps().length - 1) {
+      setTimeout(() => {
+        this.currentStep.update(s => s + 1);
+        this.animateNext();
+      }, 1500);
+    } else {
+      this.isAnimating.set(false);
+    }
+  }
+  
+  stopAnimation() {
+    this.isAnimating.set(false);
+  }
+  
+  resetAnimation() {
+    this.stopAnimation();
+    this.currentStep.set(0);
+  }
+  
+  currentStepData = computed(() => {
+    const steps = this.animationSteps();
+    const idx = this.currentStep();
+    return steps[idx] || null;
+  });
+  
+  getHighlightClass = computed(() => {
+    if (!this.showStepByStep()) return 'none';
+    const stepData = this.currentStepData();
+    return stepData?.highlight || 'none';
+  });
   
   getShaded(): VennRegion[] {
     const a = this.setA();

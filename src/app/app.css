@@ -109,6 +109,18 @@ a {
   color: #ffffff;
 }
 
+.nav-item.nav-quiz.router-link-active,
+.nav-item.nav-quiz.active {
+  background: #059669 !important;
+  color: #ffffff;
+}
+
+.nav-item.nav-tutorial.router-link-active,
+.nav-item.nav-tutorial.active {
+  background: #f59e0b !important;
+  color: #ffffff;
+}
+
 /* Default activo ( fallback) */
 .nav-item.router-link-active,
 .nav-item.active {
@@ -118,6 +130,73 @@ a {
 
 .nav-icon {
   font-size: 1rem;
+}
+
+/* Responsive - Tablet */
+@media (max-width: 768px) {
+  .nav-container {
+    padding: 0.75rem 1rem;
+  }
+  
+  .brand-text {
+    font-size: 0.875rem;
+  }
+  
+  .nav-modules {
+    gap: 0.25rem;
+  }
+  
+  .nav-item {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+  }
+  
+  .nav-item span:not(.nav-icon) {
+    display: none;
+  }
+  
+  .nav-item {
+    padding: 0.5rem;
+  }
+  
+  .nav-icon {
+    font-size: 1.125rem;
+  }
+}
+
+/* Responsive - Mobile */
+@media (max-width: 480px) {
+  .nav-container {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .nav-modules {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .nav-item span:not(.nav-icon) {
+    display: none;
+  }
+  
+  .nav-item {
+    padding: 0.625rem;
+    flex: 1;
+    justify-content: center;
+  }
+  
+  .main-content {
+    padding: 1rem 0.75rem;
+  }
+  
+  .module-title {
+    font-size: 1.5rem;
+  }
+  
+  .module-desc {
+    font-size: 0.875rem;
+  }
 }
 
 /* Main content */
